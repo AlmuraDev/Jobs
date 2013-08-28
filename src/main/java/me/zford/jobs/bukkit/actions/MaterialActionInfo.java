@@ -20,11 +20,10 @@ package me.zford.jobs.bukkit.actions;
 
 import org.bukkit.Material;
 
-import me.zford.jobs.container.ActionInfo;
 import me.zford.jobs.container.ActionType;
 import me.zford.jobs.container.BaseActionInfo;
 
-public abstract class MaterialActionInfo extends BaseActionInfo implements ActionInfo {
+public class MaterialActionInfo extends BaseActionInfo {
     private Material material;
     private byte data;
     public MaterialActionInfo(Material material, byte data, ActionType type) {
