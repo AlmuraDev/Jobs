@@ -375,7 +375,7 @@ public class Jobs {
         }
     }
     
-    public static boolean jobsLookup(org.bukkit.entity.Player player, String jobName, int jobLevel) {    	 
+    public static boolean hasRequiredJobAndLevel(org.bukkit.entity.Player player, String jobName, int jobLevel) {    	 
     	JobsPlayer jPlayer = Jobs.getPlayerManager().getJobsPlayer(player.getName());
     	Job job = Jobs.getJob(jobName);
     	if (job != null && jPlayer != null) {
