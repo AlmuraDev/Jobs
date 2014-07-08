@@ -34,6 +34,7 @@ import me.zford.jobs.container.JobsPlayer;
 import org.bukkit.GameMode;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
+import org.bukkit.entity.HumanEntity;
 import org.bukkit.entity.Item;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Projectile;
@@ -49,9 +50,7 @@ import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.EntityDeathEvent;
 import org.bukkit.event.entity.CreatureSpawnEvent.SpawnReason;
 import org.bukkit.event.inventory.BrewEvent;
-import org.bukkit.event.inventory.CraftItemEvent;
 import org.bukkit.event.inventory.FurnaceSmeltEvent;
-import org.bukkit.event.inventory.InventoryAction;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryType.SlotType;
 import org.bukkit.event.player.PlayerFishEvent;
@@ -61,6 +60,7 @@ import org.bukkit.inventory.CraftingInventory;
 import org.bukkit.inventory.EnchantingInventory;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.PlayerInventory;
 import org.bukkit.inventory.Recipe;
 import org.bukkit.metadata.FixedMetadataValue;
 import org.bukkit.metadata.MetadataValue;
@@ -78,7 +78,7 @@ public class JobsPaymentListener implements Listener {
     @EventHandler(priority=EventPriority.MONITOR, ignoreCancelled=true)
     public void onBlockBreak(BlockBreakEvent event) {
         // remove furnace metadata for broken block
-        Block block = event.getBlock();
+        Block block = event.getBlock();        
         if (block == null)
             return;
         
@@ -89,7 +89,7 @@ public class JobsPaymentListener implements Listener {
         if(!plugin.isEnabled()) return;
         
         Player player = BukkitUtil.wrapPlayer(event.getPlayer());
-        
+                
         if (!player.isOnline())
             return;
         
@@ -161,42 +161,21 @@ public class JobsPaymentListener implements Listener {
     }
 
     @EventHandler(priority=EventPriority.MONITOR, ignoreCancelled=true)
-    public void onInventoryCraft(InventoryClickEvent e) {
-        if (!(e instanceof CraftItemEvent))
-            return;
-        CraftItemEvent event = (CraftItemEvent) e;
+    public void onInventoryCraft(InventoryClickEvent event) {
         // make sure plugin is enabled
         if(!plugin.isEnabled()) return;
-        
-        // If event is nothing or place, do nothing
-        switch (event.getAction()) {
-            case NOTHING:
-            case PLACE_ONE:
-            case PLACE_ALL:
-            case PLACE_SOME:
-                return;
-            default:
-                break;
-        }
-        
-        if (event.getAction() == InventoryAction.NOTHING)
-            return;
-        
-        System.out.println(event.getAction().toString());
-        
-        CraftingInventory inv = event.getInventory();
+        Inventory inv = event.getInventory();
         
         if (!(inv instanceof CraftingInventory) || !event.getSlotType().equals(SlotType.RESULT))
             return;
         
-        Recipe recipe = event.getRecipe();
+        Recipe recipe = ((CraftingInventory) inv).getRecipe();
         
         if (recipe == null)
             return;
         
         if (!(event.getWhoClicked() instanceof org.bukkit.entity.Player))
             return;
-        System.out.println(event.getRecipe().getResult().getType().toString());
         
         org.bukkit.entity.Player bukkitPlayer = (org.bukkit.entity.Player) event.getWhoClicked();
         Player player = BukkitUtil.wrapPlayer(bukkitPlayer);
@@ -213,6 +192,31 @@ public class JobsPaymentListener implements Listener {
         if (bukkitPlayer.getGameMode().equals(GameMode.CREATIVE) && !ConfigManager.getJobsConfiguration().payInCreative())
             return;
         
+        if (event.isShiftClick()) {
+            // check for full inventory
+            PlayerInventory pInv = bukkitPlayer.getInventory();
+            boolean isFull = true;
+            for (ItemStack stack : pInv.getContents()) {
+                if (stack == null || stack.getType().equals(Material.AIR)) {
+                    isFull = false;
+                    break;
+                }
+            }
+            if (isFull)
+                return;
+        } else {
+            // check item on cursor
+            ItemStack cursor = bukkitPlayer.getItemOnCursor();
+            if (cursor != null && !cursor.getType().equals(Material.AIR)) {
+                // don't craft if it's a different item
+                if (!cursor.getType().equals(resultStack.getType()))
+                    return;
+                // check if stack is full
+                if (cursor.getAmount() >= cursor.getMaxStackSize())
+                    return;
+            }
+        }
+        
         double multiplier = ConfigManager.getJobsConfiguration().getRestrictedMultiplier(player);
         JobsPlayer jPlayer = Jobs.getPlayerManager().getJobsPlayer(player.getName());
         Jobs.action(jPlayer, new ItemActionInfo(resultStack, ActionType.CRAFT), multiplier);
@@ -224,25 +228,14 @@ public class JobsPaymentListener implements Listener {
         if(!plugin.isEnabled()) return;
         Inventory inv = event.getInventory();
         
-        // If event is nothing or place, do nothing
-        switch (event.getAction()) {
-            case NOTHING:
-            case PLACE_ONE:
-            case PLACE_ALL:
-            case PLACE_SOME:
-                return;
-            default:
-                break;
-        }
-        
         // must be anvil inventory
         if (!(inv instanceof AnvilInventory))
             return;
         
         // Must be "container" slot 9
-        if (!event.getSlotType().equals(SlotType.CONTAINER) || event.getSlot() != 2)
+        if (!event.getSlotType().equals(SlotType.CONTAINER) || event.getSlot() != 9)
             return;
-        
+
         if (!(event.getWhoClicked() instanceof org.bukkit.entity.Player))
             return;
         
@@ -261,6 +254,31 @@ public class JobsPaymentListener implements Listener {
         if (bukkitPlayer.getGameMode().equals(GameMode.CREATIVE) && !ConfigManager.getJobsConfiguration().payInCreative())
             return;
         
+        if (event.isShiftClick()) {
+            // check for full inventory
+            PlayerInventory pInv = bukkitPlayer.getInventory();
+            boolean isFull = true;
+            for (ItemStack stack : pInv.getContents()) {
+                if (stack == null || stack.getType().equals(Material.AIR)) {
+                    isFull = false;
+                    break;
+                }
+            }
+            if (isFull)
+                return;
+        } else {
+            // check item on cursor
+            ItemStack cursor = bukkitPlayer.getItemOnCursor();
+            if (cursor != null && !cursor.getType().equals(Material.AIR)) {
+                // don't craft if it's a different item
+                if (!cursor.getType().equals(resultStack.getType()))
+                    return;
+                // check if stack is full
+                if (cursor.getAmount() >= cursor.getMaxStackSize())
+                    return;
+            }
+        }
+        
         double multiplier = ConfigManager.getJobsConfiguration().getRestrictedMultiplier(player);
         JobsPlayer jPlayer = Jobs.getPlayerManager().getJobsPlayer(player.getName());
         Jobs.action(jPlayer, new ItemActionInfo(resultStack, ActionType.REPAIR), multiplier);
@@ -275,14 +293,27 @@ public class JobsPaymentListener implements Listener {
         if (!(inv instanceof EnchantingInventory))
             return;
         
-        org.bukkit.entity.Player bukkitPlayer = event.getEnchanter();
+        // restricted area multiplier
+        List<HumanEntity> viewers = event.getViewers();
+        if (viewers.size() == 0)
+            return;
+        org.bukkit.entity.Player bukkitPlayer = null;
+        for (HumanEntity viewer : event.getViewers()) {
+            if (viewer instanceof org.bukkit.entity.Player) {
+                bukkitPlayer = (org.bukkit.entity.Player) viewer;
+                break;
+            }
+        }
+        
+        if (bukkitPlayer == null)
+            return;
+        
+        Player player = BukkitUtil.wrapPlayer(bukkitPlayer);
         
         ItemStack resultStack = ((EnchantingInventory) inv).getItem();
         
         if (resultStack == null)
             return;
-
-        Player player = BukkitUtil.wrapPlayer(bukkitPlayer);
         
         if (!Jobs.getPermissionHandler().hasWorldPermission(player, player.getLocation().getWorld()))
             return;

@@ -374,4 +374,24 @@ public class Jobs {
             }
         }
     }
+    
+    public static boolean jobsLookup(org.bukkit.entity.Player player, String jobName, int jobLevel) {    	 
+    	JobsPlayer jPlayer = Jobs.getPlayerManager().getJobsPlayer(player.getName());
+    	Job job = Jobs.getJob(jobName);
+    	if (job != null && jPlayer != null) {
+    		JobProgression prog = jPlayer.getJobProgression(job);
+    		if (prog != null) {
+    			int jobCurrentLevel = prog.getLevel();
+    			if (jobLevel >= jobCurrentLevel) {
+    				return true;
+    			} else {
+    				return false;
+    			}
+    		} else {
+    			return false;
+    		}
+    	} else {
+    		return false;
+    	}
+    }
 }
