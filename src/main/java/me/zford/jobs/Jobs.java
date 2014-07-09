@@ -382,7 +382,7 @@ public class Jobs {
     		JobProgression prog = jPlayer.getJobProgression(job);
     		if (prog != null) {
     			int jobCurrentLevel = prog.getLevel();
-    			if (jobLevel >= jobCurrentLevel) {
+    			if (jobCurrentLevel >= jobLevel) {
     				return true;
     			} else {
     				return false;
